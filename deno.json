@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "noImplicitAny": true,
+    "strict": true,
+    "lib": [
+      "deno.window"
+    ]
+  },
+  "lint": {
+    "files": {
+      "include": ["src/", "mod.ts", "test/"]
+    },
+    "rules": {
+      "tags": ["recommended"]
+    }
+  },
+  "fmt": {
+    "files": {
+      "include": ["src/", "mod.ts", "test/"]
+    },
+    "options": {
+      "singleQuote": true
+    }
+  },
+  "importMap": "./import_map.json"
+}
