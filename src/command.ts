@@ -1,11 +1,15 @@
 import { Option } from './option.ts';
 import { Argument } from './argument.ts';
-import { isNotValue, isOptionFlag } from './util.ts';
+import { OptionFlagError } from './error.ts';
+import { isNotValue, isOptionFlag, resolveOptionFlagToParams } from './util.ts';
 
 export class Command<T> {
   private options: Option[];
   private arguments: Argument[];
-  private versionStr?: string;
+  private versionNumber?: string;
+  private versionDescription?: string;
+  private versionFlagShort: string;
+  private versionFlagLong: string;
   private commandName?: string;
   private usageStr?: string;
   private globalOptionalDefault: boolean | string | string[] = true;
@@ -17,6 +21,8 @@ export class Command<T> {
     this.arguments = [];
     this.optionRes = {};
     this.argumentRes = {};
+    this.versionFlagLong = '-version';
+    this.versionFlagShort = '-V';
   }
 
   private findOption(flag: string) {
@@ -44,8 +50,15 @@ export class Command<T> {
     return this;
   }
 
-  public version(ver: string) {
-    this.versionStr = ver;
+  public version(ver: string, flag?: string, description?: string) {
+    this.versionNumber = ver;
+    if (flag) {
+      const flagRes = resolveOptionFlagToParams(flag);
+      if (!flagRes) throw new OptionFlagError(flag);
+      this.versionFlagLong = flagRes.long;
+      this.versionFlagShort = flagRes.short;
+    }
+    description && (this.versionDescription = description);
     return this;
   }
 
@@ -87,12 +100,28 @@ export class Command<T> {
     }
   }
 
+  private processHelp() {
+  }
+
+  private processVersion(args: string[]) {
+    if (!this.versionNumber) return;
+    const index = args.findIndex((value) =>
+      value === this.versionFlagLong || value === this.versionFlagShort
+    );
+    if (index !== -1) {
+      console.log(this.versionNumber);
+      Deno.exit(0);
+    }
+  }
+
   public parse(args = Deno.args) {
     let iter = 0;
     let argIter = 0;
     let optionFinished = false;
     const optionAns: Record<string, unknown> = {};
     const argsAns: Record<string, unknown> = {};
+
+    this.processVersion(args);
 
     while (iter < args.length) {
       if (optionFinished) {

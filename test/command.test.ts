@@ -229,3 +229,33 @@ Deno.test('options and arguments', () => {
     verbose: true,
   });
 });
+
+Deno.test('version', () => {
+  const log = mockFn();
+  console.log = log.fn;
+  console.error = log.fn;
+
+  const program = new Command();
+  program
+    .version('0.1.0');
+
+  assertThrows(() => {
+    program.parse(['-V']);
+  });
+
+  assertEquals(log.lastCalledWith(), '0.1.0');
+
+  const programWithCustomOption = new Command();
+  programWithCustomOption
+    .version('0.2.0', '-v');
+
+  assertThrows(() => {
+    programWithCustomOption.parse(['-v']);
+  });
+  assertEquals(log.lastCalledWith(), '0.2.0');
+
+  assertThrows(() => {
+    programWithCustomOption.parse(['-V']);
+  });
+  assertEquals(log.lastCalledWith(), `error: option '-V' is not valid option.`);
+});
