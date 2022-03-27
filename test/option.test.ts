@@ -14,6 +14,17 @@ Deno.test('constructor', () => {
   assertEquals(booleanOption.type, 'boolean');
 });
 
+Deno.test('construtor 2', () => {
+  const option = new Option('--all-of-it---name [type]');
+  assertEquals(option.short, undefined);
+  assertEquals(option.long, '--all-of-it---name');
+  assertEquals(option.required, false);
+  assertEquals(option.valueName, 'allOfItName');
+  assertEquals(option.type, 'string');
+  assertEquals(option.valueNameDisplay, 'type');
+  assertEquals(option.optional, true);
+});
+
 Deno.test('constructor failed', () => {
   assertThrows(() => {
     new Option('-aa');
