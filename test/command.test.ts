@@ -1,11 +1,10 @@
 import { assertEquals, assertThrows } from 'testing/asserts.ts';
 import { Command } from '../mod.ts';
+import { mockFn } from './utils.ts';
 
 Deno.test('string option', () => {
-  let lastErrorOutput = '';
-  console.error = (str: string) => {
-    lastErrorOutput = str;
-  };
+  const error = mockFn();
+  console.error = error.fn;
 
   const program = new Command();
   program
@@ -25,14 +24,17 @@ Deno.test('string option', () => {
     program.parse(['-t']);
   });
   assertEquals(
-    lastErrorOutput,
+    error.lastCalledWith(),
     `error: option '-t, --test-camel-case <input>' needs a value.`,
   );
 
   assertThrows(() => {
     program.parse(['-a']);
   });
-  assertEquals(lastErrorOutput, `error: option '-a' is not valid option.`);
+  assertEquals(
+    error.lastCalledWith(),
+    `error: option '-a' is not valid option.`,
+  );
 });
 
 Deno.test('string array option', () => {
@@ -90,10 +92,8 @@ Deno.test('optional option', () => {
 });
 
 Deno.test('required option', () => {
-  let lastErrorOutput = '';
-  console.error = (str: string) => {
-    lastErrorOutput = str;
-  };
+  const error = mockFn();
+  console.error = error.fn;
 
   const program = new Command();
   program
@@ -103,7 +103,7 @@ Deno.test('required option', () => {
     program.parse([]);
   });
   assertEquals(
-    lastErrorOutput,
+    error.lastCalledWith(),
     `error: required option '-r, --required <param>' not found.`,
   );
 
@@ -128,10 +128,8 @@ Deno.test('multiple options', () => {
 });
 
 Deno.test('required argument', () => {
-  let lastErrorOutput = '';
-  console.error = (str: string) => {
-    lastErrorOutput = str;
-  };
+  const error = mockFn();
+  console.error = error.fn;
 
   const program = new Command();
   program
@@ -140,7 +138,7 @@ Deno.test('required argument', () => {
   assertThrows(() => {
     program.parse([]);
   });
-  assertEquals(lastErrorOutput, `error: argument 'input' is required.`);
+  assertEquals(error.lastCalledWith(), `error: argument 'input' is required.`);
 
   program.parse(['input']);
 
