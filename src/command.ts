@@ -9,10 +9,14 @@ export class Command<T> {
   private commandName?: string;
   private usageStr?: string;
   private globalOptionalDefault: boolean | string | string[] = true;
+  private optionRes: Record<string, unknown>;
+  private argumentRes: Record<string, unknown>;
 
   constructor() {
     this.options = [];
     this.arguments = [];
+    this.optionRes = {};
+    this.argumentRes = {};
   }
 
   private findOption(flag: string) {
@@ -194,6 +198,8 @@ export class Command<T> {
       iter += 1;
     }
 
+    this.checkUnprocessedRequiredOption();
+
     if (
       argIter + 1 < this.arguments.length &&
       this.arguments[argIter + 1].required
@@ -206,6 +212,15 @@ export class Command<T> {
       Deno.exit(1);
     }
 
-    return [optionAns, argsAns];
+    this.optionRes = optionAns;
+    this.argumentRes = argsAns;
+  }
+
+  public getOpts() {
+    return this.optionRes;
+  }
+
+  public getArgs() {
+    return this.argumentRes;
   }
 }
