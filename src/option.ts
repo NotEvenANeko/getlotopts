@@ -1,7 +1,6 @@
-import { OptionFlagRegex, OptionFlagValueRegex } from './constant.ts';
 import { OptionFlagError } from './error.ts';
 import { OptionValueType } from './interface.ts';
-import { snakeAndKebabToCamelCase } from './util.ts';
+import { resolveOptionFlagToParams } from './util.ts';
 
 export class Option {
   public short?: string;
@@ -17,44 +16,16 @@ export class Option {
   public processed: boolean;
 
   constructor(flag: string, required = false) {
-    // TODO: can we just match once?
-    const firstMatch = OptionFlagValueRegex.exec(flag);
-    if (!firstMatch || !firstMatch.groups) throw new OptionFlagError(flag);
-    const secondMatch = OptionFlagRegex.exec(firstMatch.groups.prefix);
-    if (!secondMatch || !secondMatch.groups) throw new OptionFlagError(flag);
+    const flagRes = resolveOptionFlagToParams(flag);
 
-    if (firstMatch.groups.required) {
-      this.optional = false;
-      this.type = firstMatch.groups.required.endsWith('...')
-        ? 'string-array'
-        : 'string';
-      this.valueNameDisplay = firstMatch.groups.required;
-    } else if (firstMatch.groups.optional) {
-      this.optional = true;
-      this.type = firstMatch.groups.optional.endsWith('...')
-        ? 'string-array'
-        : 'string';
-      this.valueNameDisplay = firstMatch.groups.optional;
-    } else {
-      this.optional = false;
-      this.type = 'boolean';
-    }
+    if (!flagRes) throw new OptionFlagError(flag);
 
-    this.valueName = '';
-
-    if (secondMatch.groups.short) {
-      this.valueName = secondMatch.groups.short.slice(1);
-      this.short = secondMatch.groups.short;
-    }
-    if (secondMatch.groups.long) {
-      const longOriginForm = secondMatch.groups.long.slice(2);
-      this.valueName = snakeAndKebabToCamelCase(longOriginForm);
-      this.long = secondMatch.groups.long;
-    }
-
-    if (this.valueName === '') {
-      throw new OptionFlagError(flag);
-    }
+    this.long = flagRes.long;
+    this.short = flagRes.short;
+    this.type = flagRes.optionType;
+    this.optional = flagRes.optionOptional;
+    this.valueName = flagRes.optionName;
+    this.valueNameDisplay = flagRes.optionValueDisplayName;
 
     this.required = required;
     this.processed = false;
