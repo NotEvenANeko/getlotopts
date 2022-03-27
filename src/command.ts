@@ -41,6 +41,7 @@ export class Command<T> {
     const tempOption = new Option(flag, true);
     desc && tempOption.setDescription(desc);
     this.options.push(tempOption);
+    return this;
   }
 
   public version(ver: string) {
@@ -80,7 +81,7 @@ export class Command<T> {
       console.error(
         `error: required option '${
           this.options[unprocessedIndex].getDisplayName()
-        }' not found`,
+        }' not found.`,
       );
       Deno.exit(1);
     }
@@ -201,12 +202,12 @@ export class Command<T> {
     this.checkUnprocessedRequiredOption();
 
     if (
-      argIter + 1 < this.arguments.length &&
-      this.arguments[argIter + 1].required
+      argIter < this.arguments.length &&
+      this.arguments[argIter].required
     ) {
       console.error(
         `error: argument '${
-          this.arguments[argIter + 1].valueNameDisplay
+          this.arguments[argIter].valueNameDisplay
         }' is required.`,
       );
       Deno.exit(1);
