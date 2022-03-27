@@ -1,3 +1,5 @@
-import { HelloWorld } from './src/hello_world.ts';
+import { Command } from 'src/command.ts';
 
-HelloWorld();
+const program = new Command();
+
+export { Command, program };

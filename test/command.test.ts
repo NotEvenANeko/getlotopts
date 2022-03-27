@@ -1,5 +1,5 @@
 import { assertEquals, assertThrows } from 'testing/asserts.ts';
-import { Command } from 'src/command.ts';
+import { Command } from '../mod.ts';
 
 Deno.test('string option', () => {
   let lastErrorOutput = '';
