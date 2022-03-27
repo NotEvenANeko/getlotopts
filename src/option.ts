@@ -20,8 +20,8 @@ export class Option {
 
     if (!flagRes) throw new OptionFlagError(flag);
 
-    this.long = flagRes.long;
-    this.short = flagRes.short;
+    this.long = flagRes.optionLong;
+    this.short = flagRes.optionShort;
     this.type = flagRes.optionType;
     this.optional = flagRes.optionOptional;
     this.valueName = flagRes.optionName;
@@ -53,5 +53,12 @@ export class Option {
           : ` <${this.valueNameDisplay}>`
         : ''
     }`;
+  }
+
+  public getHelpText() {
+    return {
+      name: this.getDisplayName(),
+      description: this.description,
+    };
   }
 }

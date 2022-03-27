@@ -1,5 +1,5 @@
 import { OptionFlagRegex, OptionFlagValueRegex } from './constant.ts';
-import { OptionValueType } from './interface.ts';
+import { FlagParams, OptionValueType } from './interface.ts';
 
 export const snakeAndKebabToCamelCase = (str: string) =>
   str
@@ -16,7 +16,9 @@ export const isOptionFlag = (str?: string) =>
 export const isNotValue = (str?: string) =>
   !str || (isOptionFlag(str) || str === '--');
 
-export const resolveOptionFlagToParams = (flag: string) => {
+export const resolveOptionFlagToParams = (
+  flag: string,
+): FlagParams | undefined => {
   const firstMatch = OptionFlagValueRegex.exec(flag);
   if (!firstMatch || !firstMatch.groups) return undefined;
   const secondMatch = OptionFlagRegex.exec(firstMatch.groups.prefix);
@@ -27,16 +29,22 @@ export const resolveOptionFlagToParams = (flag: string) => {
   const optionType: OptionValueType = optionValueDisplayName
     ? optionValueDisplayName.endsWith('...') ? 'string-array' : 'string'
     : 'boolean';
+  const optionReverse = !!(optionType === 'boolean' &&
+    secondMatch.groups?.long?.startsWith('--no-'));
+  const optionName = snakeAndKebabToCamelCase(
+    optionReverse
+      ? secondMatch.groups.long.slice(5)
+      : (secondMatch.groups.long && secondMatch.groups.long.slice(2)) ||
+        (secondMatch.groups.short && secondMatch.groups.short.slice(1)),
+  );
 
   return {
-    long: secondMatch.groups.long,
-    short: secondMatch.groups.short,
-    optionName: snakeAndKebabToCamelCase(
-      (secondMatch.groups.long && secondMatch.groups.long.slice(2)) ||
-        (secondMatch.groups.short && secondMatch.groups.short.slice(1)),
-    ),
+    optionLong: secondMatch.groups.long,
+    optionShort: secondMatch.groups.short,
+    optionName,
     optionOptional: !!firstMatch.groups.optional,
     optionType,
     optionValueDisplayName,
+    optionReverse,
   };
 };
