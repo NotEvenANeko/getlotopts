@@ -2,6 +2,7 @@ import { assertEquals } from 'testing/asserts.ts';
 import {
   isNotValue,
   isOptionFlag,
+  resolveOptionFlagToParams,
   snakeAndKebabToCamelCase,
 } from 'src/util.ts';
 
@@ -32,4 +33,53 @@ Deno.test('isOptionFlag', () => {
   assertEquals(isOptionFlag('--all'), true);
   assertEquals(isOptionFlag('--'), false);
   assertEquals(isOptionFlag('a'), false);
+});
+
+Deno.test('resolveOptionFlagToParams', () => {
+  assertEquals(resolveOptionFlagToParams('-a, --all <type>'), {
+    optionShort: '-a',
+    optionLong: '--all',
+    optionName: 'all',
+    optionOptional: false,
+    optionType: 'string',
+    optionValueDisplayName: 'type',
+    optionReverse: false,
+  });
+  assertEquals(resolveOptionFlagToParams('-a, --all [type...]'), {
+    optionShort: '-a',
+    optionLong: '--all',
+    optionName: 'all',
+    optionOptional: true,
+    optionType: 'string-array',
+    optionValueDisplayName: 'type...',
+    optionReverse: false,
+  });
+  assertEquals(resolveOptionFlagToParams('-a, --all'), {
+    optionShort: '-a',
+    optionLong: '--all',
+    optionName: 'all',
+    optionOptional: false,
+    optionType: 'boolean',
+    optionValueDisplayName: undefined,
+    optionReverse: false,
+  });
+  assertEquals(resolveOptionFlagToParams('--no-all-of'), {
+    optionShort: undefined,
+    optionLong: '--no-all-of',
+    optionName: 'allOf',
+    optionOptional: false,
+    optionType: 'boolean',
+    optionValueDisplayName: undefined,
+    optionReverse: true,
+  });
+  assertEquals(resolveOptionFlagToParams('-n'), {
+    optionShort: '-n',
+    optionLong: undefined,
+    optionName: 'n',
+    optionOptional: false,
+    optionType: 'boolean',
+    optionValueDisplayName: undefined,
+    optionReverse: false,
+  });
+  assertEquals(resolveOptionFlagToParams(''), undefined);
 });
