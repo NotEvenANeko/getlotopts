@@ -78,8 +78,8 @@ export class Option {
     }${
       this.valueNameDisplay
         ? this.optional
-          ? `[${this.valueNameDisplay}]`
-          : `<${this.valueNameDisplay}>`
+          ? ` [${this.valueNameDisplay}]`
+          : ` <${this.valueNameDisplay}>`
         : ''
     }`;
   }
