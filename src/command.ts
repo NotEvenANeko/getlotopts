@@ -1,28 +1,50 @@
 import { Option } from './option.ts';
 import { Argument } from './argument.ts';
 import { OptionFlagError } from './error.ts';
-import { isNotValue, isOptionFlag, resolveOptionFlagToParams } from './util.ts';
+import { OptionHelpOutput, ParseOptionToType } from './interface.ts';
+import {
+  concatFlag,
+  isNotValue,
+  isOptionFlag,
+  resolveOptionFlagToParams,
+} from './util.ts';
 
-export class Command<T> {
-  private options: Option[];
-  private arguments: Argument[];
+export class Command<
+  Opt extends Record<string, unknown> = Record<never, never>,
+  Arg extends Record<string, unknown> = Record<never, never>,
+> {
+  private options: Option[]; // Options like -a, --all <value>
+  private arguments: Argument[]; // Arguments like npm i this-is-argument
+
   private versionNumber?: string;
   private versionDescription?: string;
-  private versionFlagShort: string;
-  private versionFlagLong: string;
+  private versionFlagShort?: string;
+  private versionFlagLong?: string;
+
+  private helpFlagShort: string;
+  private helpFlagLong: string;
+  private helpDescription?: string;
+
   private commandName?: string;
-  private usageStr?: string;
+  private commandUsage?: string;
+  private commandDescription?: string;
+
   private globalOptionalDefault: boolean | string | string[] = true;
-  private optionRes: Record<string, unknown>;
-  private argumentRes: Record<string, unknown>;
+  private optionRes: Opt; // Parsed options
+  private argumentRes: Arg; // Parsed arguments
 
   constructor() {
     this.options = [];
     this.arguments = [];
-    this.optionRes = {};
-    this.argumentRes = {};
-    this.versionFlagLong = '-version';
+    this.optionRes = {} as Opt;
+    this.argumentRes = {} as Arg;
+
     this.versionFlagShort = '-V';
+    this.versionFlagLong = '--version';
+    this.versionDescription = 'display version';
+    this.helpFlagShort = '-h';
+    this.helpFlagLong = '--help';
+    this.helpDescription = 'display this help message';
   }
 
   private findOption(flag: string) {
@@ -36,18 +58,24 @@ export class Command<T> {
     return this;
   }
 
-  public option(flag: string, desc?: string) {
+  public option<Flag extends string>(
+    flag: Flag,
+    desc?: string,
+  ): Command<Opt & ParseOptionToType<Flag>> {
     const tempOption = new Option(flag);
     desc && tempOption.setDescription(desc);
     this.options.push(tempOption);
-    return this;
+    return this as Command<Opt & ParseOptionToType<Flag>>;
   }
 
-  public requiredOption(flag: string, desc?: string) {
+  public requiredOption<Flag extends string>(
+    flag: Flag,
+    desc?: string,
+  ): Command<Opt & ParseOptionToType<Flag, true>> {
     const tempOption = new Option(flag, true);
     desc && tempOption.setDescription(desc);
     this.options.push(tempOption);
-    return this;
+    return this as Command<Opt & ParseOptionToType<Flag, true>>;
   }
 
   public version(ver: string, flag?: string, description?: string) {
@@ -55,8 +83,8 @@ export class Command<T> {
     if (flag) {
       const flagRes = resolveOptionFlagToParams(flag);
       if (!flagRes) throw new OptionFlagError(flag);
-      this.versionFlagLong = flagRes.long;
-      this.versionFlagShort = flagRes.short;
+      this.versionFlagLong = flagRes.optionLong;
+      this.versionFlagShort = flagRes.optionShort;
     }
     description && (this.versionDescription = description);
     return this;
@@ -64,6 +92,11 @@ export class Command<T> {
 
   public name(name: string) {
     this.commandName = name;
+    return this;
+  }
+
+  public description(description: string) {
+    this.commandDescription = description;
     return this;
   }
 
@@ -82,7 +115,7 @@ export class Command<T> {
   }
 
   public usage(usage: string) {
-    this.usageStr = usage;
+    this.commandUsage = usage;
     return this;
   }
 
@@ -100,7 +133,106 @@ export class Command<T> {
     }
   }
 
-  private processHelp() {
+  private versionAvailable() {
+    return (this.versionFlagShort || this.versionFlagLong) &&
+      this.versionNumber;
+  }
+
+  private helpAvailable() {
+    return this.helpFlagLong || this.helpFlagShort;
+  }
+
+  private processHelp(args: string[]) {
+    const index = args.findIndex((value) =>
+      value === this.helpFlagLong || value === this.helpFlagShort
+    );
+
+    if (index === -1) {
+      return;
+    }
+
+    let outputArray: string[] = [];
+
+    if (this.commandName && this.commandUsage) {
+      outputArray.push(`Usage: ${this.commandName} ${this.commandUsage}`);
+      outputArray.push('');
+    }
+
+    if (this.commandDescription) {
+      outputArray.push(this.commandDescription);
+      outputArray.push('');
+    }
+
+    if (
+      this.options.length || this.versionAvailable() || this.helpAvailable()
+    ) {
+      outputArray.push('Options:');
+
+      let optionsOutput: OptionHelpOutput = {
+        output: [],
+        maxPrefixLength: 0,
+      };
+
+      if (this.options.length) {
+        optionsOutput = this.options.reduce<OptionHelpOutput>((pre, cur) => {
+          const text = cur.getHelpText();
+          return {
+            maxPrefixLength: Math.max(pre.maxPrefixLength, text.name.length),
+            output: [...pre.output, [text.name, text.description || '']],
+          };
+        }, {
+          output: [],
+          maxPrefixLength: 0,
+        });
+      }
+
+      if (this.versionAvailable()) {
+        const prefix = concatFlag(this.versionFlagShort, this.versionFlagLong);
+        optionsOutput.output.push([
+          prefix,
+          this.versionDescription ?? '',
+        ]);
+        optionsOutput.maxPrefixLength = Math.max(
+          prefix.length,
+          optionsOutput.maxPrefixLength,
+        );
+      }
+
+      if (this.helpAvailable()) {
+        const prefix = concatFlag(this.helpFlagShort, this.helpFlagLong);
+        optionsOutput.output.push([
+          prefix,
+          this.helpDescription ?? '',
+        ]);
+        optionsOutput.maxPrefixLength = Math.max(
+          optionsOutput.maxPrefixLength,
+          prefix.length,
+        );
+      }
+
+      outputArray = outputArray.concat(
+        optionsOutput.output
+          .sort(([first, _f], [second, _s]) => {
+            if (first.startsWith('--') && second.startsWith('-')) return 1;
+            if (first.startsWith('-') && second.startsWith('--')) return -1;
+            if (first.startsWith('-') && second.startsWith('-')) {
+              return first.slice(1) < second.slice(1) ? -1 : 1;
+            }
+            if (first.startsWith('--') && second.startsWith('--')) {
+              return first.slice(2) < second.slice(2) ? -1 : 1;
+            }
+            return 0;
+          })
+          .map(([prefix, desc]) => {
+            return '  ' + prefix.padEnd(optionsOutput.maxPrefixLength, ' ') +
+                '  ' +
+                desc ?? '';
+          }),
+      );
+    }
+
+    console.log(outputArray.join('\n'));
+    Deno.exit(0);
   }
 
   private processVersion(args: string[]) {
@@ -121,6 +253,7 @@ export class Command<T> {
     const optionAns: Record<string, unknown> = {};
     const argsAns: Record<string, unknown> = {};
 
+    this.processHelp(args);
     this.processVersion(args);
 
     while (iter < args.length) {
@@ -242,8 +375,8 @@ export class Command<T> {
       Deno.exit(1);
     }
 
-    this.optionRes = optionAns;
-    this.argumentRes = argsAns;
+    this.optionRes = optionAns as Opt & { [key: string]: unknown };
+    this.argumentRes = argsAns as Arg & { [key: string]: unknown };
   }
 
   public getOpts() {
