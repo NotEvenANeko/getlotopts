@@ -259,3 +259,14 @@ Deno.test('version', () => {
   });
   assertEquals(log.lastCalledWith(), `error: option '-V' is not valid option.`);
 });
+
+Deno.test('help', () => {
+  const program = new Command();
+  program
+    .option('-v, --verbose', 'show verbose log of command')
+    .option('--input [files...]', 'use files for input');
+
+  assertThrows(() => {
+    program.parse(['--help']);
+  });
+});

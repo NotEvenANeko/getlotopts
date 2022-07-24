@@ -48,3 +48,16 @@ export const resolveOptionFlagToParams = (
     optionReverse,
   };
 };
+
+export const concatFlag = (
+  short?: string,
+  long?: string,
+  valueNameDisplay?: string,
+  optional?: boolean,
+) => {
+  return `${short ?? ''}${long && (short ? `, ${long}` : long)}${
+    valueNameDisplay
+      ? (optional ? ` [${valueNameDisplay}]` : ` <${valueNameDisplay}>`)
+      : ''
+  }`;
+};
